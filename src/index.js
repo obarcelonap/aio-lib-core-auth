@@ -49,6 +49,9 @@ function invalidateCache () {
 /**
  * Generates an access token for authentication (with caching)
  *
+ * Credentials are resolved in order: direct params (camelCase or snake_case), then __ims_oauth_s2s if direct credentials are absent.
+ * Environment is resolved in order: imsEnv argument, then params.__ims_env, then 'stage' if __OW_NAMESPACE starts with 'development-', otherwise 'prod'.
+ *
  * @param {object} params - Token parameters; must include camelCase credentials, snake_case credentials, or an __ims_oauth_s2s annotation object
  * @param {string} params.clientId - The client ID (camelCase form; alternatively client_id)
  * @param {string} params.clientSecret - The client secret (camelCase form; alternatively client_secret)
