@@ -2,12 +2,16 @@
  * Typings for @adobe/aio-lib-core-auth
  */
 
-export interface TokenParams {
-  clientId?: string
-  clientSecret?: string
-  orgId?: string
+type Credentials =
+  | { clientId: string; clientSecret: string; orgId: string }
+  | { client_id: string; client_secret: string; org_id: string }
+
+export type TokenParams = Credentials & {
   scopes?: string[]
-  [key: string]: unknown
+  /** Credentials injected by the include-ims-credentials annotation */
+  __ims_oauth_s2s?: Record<string, unknown>
+  /** Runtime IMS environment override */
+  __ims_env?: string
 }
 
 export interface TokenResponse {
