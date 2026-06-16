@@ -50,9 +50,9 @@ function invalidateCache () {
  * Generates an access token for authentication (with caching)
  *
  * @param {object} params - Parameters for token generation
- * @param {string} params.clientId - The client ID
- * @param {string} params.clientSecret - The client secret
- * @param {string} params.orgId - The organization ID
+ * @param {string} params.clientId - The client ID (also accepts client_id)
+ * @param {string} params.clientSecret - The client secret (also accepts client_secret)
+ * @param {string} params.orgId - The organization ID (also accepts org_id)
  * @param {string[]} [params.scopes=[]] - Array of scopes to request
  * @param {string} [imsEnv] - The IMS environment ('prod' or 'stage'); when omitted or falsy, uses stage if __OW_NAMESPACE starts with 'development-', else prod
  * @returns {Promise<object>} Promise that resolves with the token response
