@@ -3,13 +3,13 @@
  */
 
 type Credentials =
-  | { clientId: string; clientSecret: string; orgId: string }
-  | { client_id: string; client_secret: string; org_id: string }
+  | { clientId: string; clientSecret: string; orgId: string; scopes?: string[] }
+  | { client_id: string; client_secret: string; org_id: string; scopes?: string[] }
 
-export type TokenParams = Credentials & {
-  scopes?: string[]
-  /** Credentials injected by the include-ims-credentials annotation */
-  __ims_oauth_s2s?: Record<string, unknown>
+export type TokenParams = (
+  | Credentials
+  | { __ims_oauth_s2s: Credentials }
+) & {
   /** Runtime IMS environment override */
   __ims_env?: string
 }
