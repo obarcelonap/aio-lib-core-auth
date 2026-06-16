@@ -22,11 +22,12 @@ export interface TokenResponse {
 
 /**
  * Generates an access token for authentication (with caching)
- * @param params - Parameters for token generation
- * @param params.clientId - The client ID (also accepts client_id)
- * @param params.clientSecret - The client secret (also accepts client_secret)
- * @param params.orgId - The organization ID (also accepts org_id)
- * @param [params.scopes = []] - Array of scopes to request
+ * @param params - Token parameters; must include camelCase credentials, snake_case credentials, or an __ims_oauth_s2s annotation object
+ * @param params.clientId - The client ID (camelCase form; alternatively client_id)
+ * @param params.clientSecret - The client secret (camelCase form; alternatively client_secret)
+ * @param params.orgId - The organization ID (camelCase form; alternatively org_id)
+ * @param params.scopes - Array of scopes to request (default [])
+ * @param params.__ims_oauth_s2s - Credentials injected by the include-ims-credentials annotation
  * @param [imsEnv] - The IMS environment ('prod' or 'stage'); when omitted or falsy, uses stage if __OW_NAMESPACE starts with 'development-', else prod
  * @returns Promise that resolves with the token response
  * @throws If there's an error getting the access token
