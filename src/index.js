@@ -47,6 +47,42 @@ function invalidateCache () {
 }
 
 /**
+ * Resolves credentials and environment from token params, without requesting a token.
+ *
+ * Credentials are resolved in order: direct params (camelCase or snake_case), then __ims_oauth_s2s if direct credentials are absent.
+ * Environment is resolved in order: imsEnv argument, then params.__ims_env, then 'stage' if __OW_NAMESPACE starts with 'development-', otherwise 'prod'.
+ *
+ * @param {object} params - Token parameters; must include camelCase credentials, snake_case credentials, or an __ims_oauth_s2s annotation object
+ * @param {string} params.clientId - The client ID (camelCase form; alternatively client_id)
+ * @param {string} params.clientSecret - The client secret (camelCase form; alternatively client_secret)
+ * @param {string} params.orgId - The organization ID (camelCase form; alternatively org_id)
+ * @param {string[]} [params.scopes=[]] - Array of scopes to request
+ * @param {object} [params.__ims_oauth_s2s] - Credentials injected by the include-ims-credentials annotation
+ * @param {string} [imsEnv] - The IMS environment ('prod' or 'stage'); when omitted or falsy, uses stage if __OW_NAMESPACE starts with 'development-', else prod
+ * @returns {{ credentials: object, env: string }} The resolved, normalized credentials and environment
+ * @throws {Error} If no valid credentials can be resolved
+ */
+function resolveCredentials (params, imsEnv) {
+  // integrate with the runtime environment and include-ims-credentials annotation
+  const env = imsEnv || params?.[IMS_ENV_INPUT] || (ioRuntimeStageNamespace() ? 'stage' : 'prod')
+
+  let credentials
+
+  // get parameters from params in priority otherwise try to load the credentials set to params.__ims_oauth_s2s by the annotation
+  const fromParams = getAndValidateCredentials(params)
+  credentials = fromParams.credentials
+  if (fromParams.error) {
+    const fromAnnotation = getAndValidateCredentials(params?.[IMS_OAUTH_S2S_INPUT])
+    if (fromAnnotation.error) {
+      throw fromParams.error // still throw original error
+    }
+    credentials = fromAnnotation.credentials
+  }
+
+  return { credentials, env }
+}
+
+/**
  * Generates an access token for authentication (with caching)
  *
  * Credentials are resolved in order: direct params (camelCase or snake_case), then __ims_oauth_s2s if direct credentials are absent.
@@ -63,23 +99,9 @@ function invalidateCache () {
  * @throws {Error} If there's an error getting the access token
  */
 async function generateAccessToken (params, imsEnv) {
-  // integrate with the runtime environment and include-ims-credentials annotation
-  imsEnv = imsEnv || params?.[IMS_ENV_INPUT] || (ioRuntimeStageNamespace() ? 'stage' : 'prod')
+  const { credentials, env } = resolveCredentials(params, imsEnv)
 
-  let credentials
-
-  // get parameters from params in priority otherwise try to load the credentials set to params.__ims_oauth_s2s by the annotation
-  const fromParams = getAndValidateCredentials(params)
-  credentials = fromParams.credentials
-  if (fromParams.error) {
-    const fromAnnotation = getAndValidateCredentials(params?.[IMS_OAUTH_S2S_INPUT])
-    if (fromAnnotation.error) {
-      throw fromParams.error // still throw original error
-    }
-    credentials = fromAnnotation.credentials
-  }
-
-  const credAndEnv = { ...credentials, env: imsEnv }
+  const credAndEnv = { ...credentials, env }
 
   // Check cache first
   const cacheKey = getCacheKey(credAndEnv)
@@ -103,5 +125,6 @@ function ioRuntimeStageNamespace () {
 
 module.exports = {
   invalidateCache,
-  generateAccessToken
+  generateAccessToken,
+  resolveCredentials
 }

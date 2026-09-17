@@ -20,6 +20,31 @@ export interface TokenResponse {
   expires_in: number
 }
 
+export interface ResolvedCredentials {
+  clientId: string
+  clientSecret: string
+  orgId: string
+  scopes: string[]
+}
+
+export interface ResolvedAuth {
+  credentials: ResolvedCredentials
+  env: string
+}
+
+/**
+ * Resolves credentials and environment from token params, without requesting a token.
+ *
+ * Credentials are resolved in order: direct params (camelCase or snake_case), then __ims_oauth_s2s if direct credentials are absent.
+ * Environment is resolved in order: imsEnv argument, then params.__ims_env, then 'stage' if __OW_NAMESPACE starts with 'development-', otherwise 'prod'.
+ *
+ * @param params - Token parameters; must include camelCase credentials, snake_case credentials, or an __ims_oauth_s2s annotation object
+ * @param [imsEnv] - The IMS environment ('prod' or 'stage'); when omitted or falsy, uses stage if __OW_NAMESPACE starts with 'development-', else prod
+ * @returns The resolved, normalized credentials and environment
+ * @throws If no valid credentials can be resolved
+ */
+export function resolveCredentials(params: TokenParams, imsEnv?: string): ResolvedAuth
+
 /**
  * Generates an access token for authentication (with caching)
  *
