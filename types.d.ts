@@ -46,6 +46,16 @@ export interface ResolvedAuth {
 export function resolveCredentials(params: TokenParams, imsEnv?: string): ResolvedAuth
 
 /**
+ * Generates an access token for authentication (with caching), from an already-resolved
+ * { credentials, env } object (as returned by resolveCredentials).
+ *
+ * @param auth - Already-resolved credentials and environment
+ * @returns Promise that resolves with the token response
+ * @throws If there's an error getting the access token
+ */
+export function generateAccessToken(auth: ResolvedAuth): Promise<TokenResponse>
+
+/**
  * Generates an access token for authentication (with caching)
  *
  * Credentials are resolved in order: direct params (camelCase or snake_case), then __ims_oauth_s2s if direct credentials are absent.

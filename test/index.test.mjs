@@ -10,7 +10,7 @@ governing permissions and limitations under the License.
 */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { generateAccessToken, invalidateCache } from '../src/index.js'
+import { generateAccessToken, invalidateCache, resolveCredentials } from '../src/index.js'
 import { IMS_OAUTH_S2S_INPUT } from '../src/constants.js'
 
 // Mock fetch globally
@@ -597,5 +597,124 @@ describe('generateAccessToken - BAD_CREDENTIALS_FORMAT error', () => {
     expect(error.code).toBe('BAD_CREDENTIALS_FORMAT')
     expect(error.sdkDetails).toBeDefined()
     expect(error.sdkDetails.paramsType).toBe('object')
+  })
+})
+
+describe('resolveCredentials', () => {
+  const validParams = {
+    clientId: 'test-client-id',
+    clientSecret: 'test-client-secret',
+    orgId: 'test-org-id',
+    scopes: ['openid']
+  }
+
+  test('is a function', () => {
+    expect(typeof resolveCredentials).toBe('function')
+  })
+
+  test('resolves camelCase credentials and defaults env to prod', () => {
+    const { credentials, env } = resolveCredentials(validParams)
+
+    expect(credentials).toEqual(validParams)
+    expect(env).toBe('prod')
+  })
+
+  test('resolves snake_case credentials', () => {
+    const snakeCaseParams = {
+      client_id: 'test-client-id',
+      client_secret: 'test-client-secret',
+      org_id: 'test-org-id'
+    }
+
+    const { credentials } = resolveCredentials(snakeCaseParams)
+
+    expect(credentials).toEqual({
+      clientId: 'test-client-id',
+      clientSecret: 'test-client-secret',
+      orgId: 'test-org-id',
+      scopes: []
+    })
+  })
+
+  test('falls back to __ims_oauth_s2s annotation when direct params are invalid', () => {
+    const annotationCredentials = {
+      clientId: 'annotation-client-id',
+      clientSecret: 'annotation-client-secret',
+      orgId: 'annotation-org-id'
+    }
+
+    const { credentials } = resolveCredentials({ [IMS_OAUTH_S2S_INPUT]: annotationCredentials })
+
+    expect(credentials).toEqual({ ...annotationCredentials, scopes: [] })
+  })
+
+  test('throws the original params error when both direct params and annotation are invalid', () => {
+    expect(() => resolveCredentials({})).toThrow('MISSING_PARAMETERS')
+  })
+
+  test('resolves env in order: imsEnv arg, then params.__ims_env, then default', () => {
+    expect(resolveCredentials(validParams, 'stage').env).toBe('stage')
+    expect(resolveCredentials({ ...validParams, __ims_env: 'stage' }).env).toBe('stage')
+    expect(resolveCredentials({ ...validParams, __ims_env: 'stage' }, 'prod').env).toBe('prod')
+    expect(resolveCredentials(validParams).env).toBe('prod')
+  })
+})
+
+describe('generateAccessToken - with pre-resolved credentials', () => {
+  const mockSuccessResponse = {
+    access_token: 'test-access-token',
+    token_type: 'bearer',
+    expires_in: 86399
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    invalidateCache()
+  })
+
+  test('accepts a ResolvedAuth object directly, skipping re-resolution', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: createMockHeaders(),
+      json: async () => mockSuccessResponse
+    })
+
+    const resolved = resolveCredentials({
+      clientId: 'test-client-id',
+      clientSecret: 'test-client-secret',
+      orgId: 'test-org-id',
+      scopes: ['openid']
+    }, 'stage')
+
+    const result = await generateAccessToken(resolved)
+
+    expect(result).toEqual(mockSuccessResponse)
+    expect(fetch).toHaveBeenCalledWith(
+      'https://ims-na1-stg1.adobelogin.com/ims/token/v2',
+      expect.any(Object)
+    )
+  })
+
+  test('ignores the imsEnv argument when params is a ResolvedAuth object', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: createMockHeaders(),
+      json: async () => mockSuccessResponse
+    })
+
+    const resolved = resolveCredentials({
+      clientId: 'test-client-id',
+      clientSecret: 'test-client-secret',
+      orgId: 'test-org-id'
+    }, 'stage')
+
+    await generateAccessToken(resolved, 'prod')
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://ims-na1-stg1.adobelogin.com/ims/token/v2',
+      expect.any(Object)
+    )
   })
 })
