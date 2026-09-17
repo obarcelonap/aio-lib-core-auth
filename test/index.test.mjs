@@ -457,7 +457,7 @@ describe('resolveCredentials', () => {
     })
   })
 
-  test('falls back to __ims_oauth_s2s annotation when direct params are invalid', () => {
+  test('uses credentials from include-ims-credentials annotation when params has no direct credentials', () => {
     const annotationCredentials = {
       clientId: 'annotation-client-id',
       clientSecret: 'annotation-client-secret',
